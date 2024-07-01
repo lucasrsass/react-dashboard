@@ -1,68 +1,54 @@
 import React, { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
-import { fetchData } from '../services/influxdbService'; // Ensure this path is correct
 import { Box, IconButton, Typography, useTheme } from '@mui/material';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import { tokens } from '../theme';
 import 'chart.js/auto';
 import './LiveChart.css';
 
-const LiveChart = ({ isDashboard = false }) => {
+const LiveChart = ({ data, isDashboard = false }) => {
   const [chartData, setChartData] = useState({ labels: [], datasets: [] });
   const [latency, setLatency] = useState(0);
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
 
   useEffect(() => {
-    const getData = async () => {
-      try {
-        const data = await fetchData();
-        console.log('Fetched data:', data);
+    if (data && data.device && data.value) {
+      const currentTimestamp = Date.now();
+      const dataTimestamp = currentTimestamp; // Assuming the data is generated live
+      const newLatency = currentTimestamp - dataTimestamp;
+      setLatency(newLatency);
 
-        if (data && data.length > 0) {
-          const currentTimestamp = Date.now();
-          const dataTimestamp = new Date(data[0].timestamp).getTime();
-          const newLatency = currentTimestamp - dataTimestamp;
-          setLatency(newLatency);
+      setChartData((prevState) => {
+        const labels = [...prevState.labels, new Date().toLocaleTimeString()];
+        const values = [...(prevState.datasets[0]?.data || []), data.value];
 
-          const labels = data.map((d) => new Date(d.time).toLocaleTimeString());
-          const values = data.map((d) => d.value);
+        // Limit the data to the latest 50 values
+        const limitedLabels = labels.slice(-50);
+        const limitedValues = values.slice(-50);
 
-          // Limit the data to the latest 50 values
-          const limitedLabels = labels.slice(-50);
-          const limitedValues = values.slice(-50);
-
-          setChartData({
-            labels: limitedLabels,
-            datasets: [
-              {
-                label: 'Random Integer',
-                data: limitedValues,
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                fill: false,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                pointStyle: 'circle',
-                tension: 0.4,
-                pointBorderColor: 'rgba(75, 192, 192, 1)',
-                pointBackgroundColor: 'rgba(75, 192, 192, 0.8)',
-                borderWidth: 2,
-              },
-            ],
-          });
-        } else {
-          console.warn('No data received from fetchData');
-        }
-      } catch (error) {
-        console.error('Error fetching data', error);
-      }
-    };
-
-    const intervalId = setInterval(getData, 1000); // Fetch new data every 1 second
-
-    return () => clearInterval(intervalId); // Cleanup interval on component unmount
-  }, []);
+        return {
+          labels: limitedLabels,
+          datasets: [
+            {
+              label: 'Random Integer',
+              data: limitedValues,
+              borderColor: 'rgba(75, 192, 192, 1)',
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              fill: false,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              pointStyle: 'circle',
+              tension: 0.4,
+              pointBorderColor: 'rgba(75, 192, 192, 1)',
+              pointBackgroundColor: 'rgba(75, 192, 192, 0.8)',
+              borderWidth: 2,
+            },
+          ],
+        };
+      });
+    }
+  }, [data]);
 
   return (
     <Box

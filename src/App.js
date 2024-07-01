@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Topbar from './scenes/global/Topbar';
 import Sidebar from './scenes/global/Sidebar';
@@ -16,10 +16,28 @@ import Calendar from './scenes/calendar/calendar';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { ColorModeContext, useMode } from './theme';
 import Live from './scenes/live'; // Ensure this import is correct
+import io from 'socket.io-client';
+
+const SOCKET_SERVER_URL = 'http://192.168.68.196:4000'; // Replace with your server IP
 
 function App() {
   const [theme, colorMode] = useMode();
   const [isSidebar, setIsSidebar] = useState(true);
+  const [liveData, setLiveData] = useState({ device: '', value: 0 });
+
+  useEffect(() => {
+    // Connect to the WebSocket server
+    const socket = io(SOCKET_SERVER_URL);
+
+    // Listen for data updates from the server
+    socket.on('data-update', (newData) => {
+      console.log('Data received:', newData);
+      setLiveData(newData);
+    });
+
+    // Clean up the connection when the component unmounts
+    return () => socket.disconnect();
+  }, []);
 
   return (
     <ColorModeContext.Provider value={colorMode}>
@@ -41,8 +59,8 @@ function App() {
               <Route path="/faq" element={<FAQ />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/geography" element={<Geography />} />
-              <Route path="/live" element={<Live />} />{' '}
-              {/* Added route for LiveChart */}
+              <Route path="/live" element={<Live data={liveData} />} />{' '}
+              {/* Pass liveData to Live component */}
             </Routes>
           </main>
         </div>
